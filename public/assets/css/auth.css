@@ -1,0 +1,37 @@
+/**
+ * ------------------------------------------------------------------
+ * NexusCore Authentication Styles
+ * ------------------------------------------------------------------
+ */
+
+body.login-page {
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+}
+
+.login-card {
+  border: none;
+
+  border-radius: 16px;
+
+  overflow: hidden;
+}
+
+.input-group-text {
+  background: #ffffff;
+}
+
+.form-control {
+  height: 48px;
+}
+
+.btn-primary {
+  font-weight: 600;
+
+  font-size: 16px;
+
+  border-radius: 10px;
+}
+
+.card-body {
+  background: #ffffff;
+}

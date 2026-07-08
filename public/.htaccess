@@ -1,0 +1,16 @@
+<IfModule mod_rewrite.c>
+
+    RewriteEngine On
+
+    RewriteBase /NexusCore/public/
+
+    # If the request is NOT an existing file
+    RewriteCond %{REQUEST_FILENAME} !-f
+
+    # If the request is NOT an existing directory
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Redirect everything to index.php
+    RewriteRule ^ index.php [QSA,L]
+
+</IfModule>

@@ -1,0 +1,254 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * -------------------------------------------------------------------------
+ * NexusCore
+ * -------------------------------------------------------------------------
+ * File        : UserValidator.php
+ * Location    : app/Validators/
+ * Description : Validates user input before it reaches the
+ *               service and model layers.
+ *
+ * Responsibilities
+ * ----------------
+ * • Validate employee ID
+ * • Validate full name
+ * • Validate email
+ * • Validate phone number
+ * • Validate department
+ * • Validate role
+ * • Validate password
+ * • Validate account status
+ *
+ * NOTE
+ * ----
+ * This class performs only input validation.
+ * It does NOT communicate with the database.
+ * Business rules belong in UserService.
+ *
+ * Author      : Sugumaran J
+ * Project     : NexusCore
+ * -------------------------------------------------------------------------
+ */
+
+namespace App\Validators;
+
+final class UserValidator
+{
+    /**
+     * ---------------------------------------------------------------------
+     * Validate user data.
+     *
+     * @param array $data
+     *
+     * @return array<string, string>
+     * ---------------------------------------------------------------------
+     */
+    public function validate(array $data): array
+    {
+        $errors = [];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Employee ID
+        |--------------------------------------------------------------------------
+        */
+
+        $employeeId = strtoupper(
+            trim($data['employee_id'] ?? '')
+        );
+
+        if ($employeeId === '') {
+
+            $errors['employee_id'] =
+                'Employee ID is required.';
+        }
+        elseif (!preg_match('/^[A-Z0-9]{4,20}$/', $employeeId)) {
+
+            $errors['employee_id'] =
+                'Employee ID must contain only uppercase letters and numbers (4–20 characters).';
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Full Name
+        |--------------------------------------------------------------------------
+        */
+
+        $fullName = trim($data['full_name'] ?? '');
+
+        if ($fullName === '') {
+
+            $errors['full_name'] =
+                'Full name is required.';
+        }
+        elseif (mb_strlen($fullName) > 120) {
+
+            $errors['full_name'] =
+                'Full name cannot exceed 120 characters.';
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Email Address
+        |--------------------------------------------------------------------------
+        */
+
+        $email = strtolower(
+            trim($data['email'] ?? '')
+        );
+
+        if ($email === '') {
+
+            $errors['email'] =
+                'Email address is required.';
+        }
+        elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+
+            $errors['email'] =
+                'Please enter a valid email address.';
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Phone Number
+        |--------------------------------------------------------------------------
+        */
+
+        $phone = trim($data['phone'] ?? '');
+
+        if ($phone !== '') {
+
+            if (!preg_match('/^[0-9]{10,15}$/', $phone)) {
+
+                $errors['phone'] =
+                    'Phone number must contain 10 to 15 digits.';
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | User Role
+        |--------------------------------------------------------------------------
+        */
+
+        $role = trim($data['role'] ?? '');
+
+        $allowedRoles = [
+
+            'Admin',
+
+            'Principal',
+
+            'HOD',
+
+            'Staff'
+
+        ];
+
+        if (!in_array($role, $allowedRoles, true)) {
+
+            $errors['role'] =
+                'Please select a valid user role.';
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Department
+        |--------------------------------------------------------------------------
+        |
+        | Department is mandatory for:
+        | - HOD
+        | - Staff
+        |
+        */
+
+        $departmentId = trim(
+            (string) ($data['department_id'] ?? '')
+        );
+
+        if (
+
+            in_array($role, ['HOD', 'Staff'], true)
+
+            &&
+
+            $departmentId === ''
+
+        ) {
+
+            $errors['department_id'] =
+                'Please select a department.';
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Password
+        |--------------------------------------------------------------------------
+        |
+        | Password validation is required only while
+        | creating a new user.
+        |
+        */
+
+        if (empty($data['user_id'])) {
+
+            $password = $data['password'] ?? '';
+
+            $confirmPassword =
+                $data['confirm_password'] ?? '';
+
+            if ($password === '') {
+
+                $errors['password'] =
+                    'Password is required.';
+            }
+            elseif (strlen($password) < 8) {
+
+                $errors['password'] =
+                    'Password must contain at least 8 characters.';
+            }
+
+            if ($confirmPassword === '') {
+
+                $errors['confirm_password'] =
+                    'Please confirm the password.';
+            }
+            elseif ($password !== $confirmPassword) {
+
+                $errors['confirm_password'] =
+                    'Passwords do not match.';
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Account Status
+        |--------------------------------------------------------------------------
+        */
+
+        $accountStatus = trim(
+            $data['account_status'] ?? ''
+        );
+
+        $allowedStatus = [
+
+            'Active',
+
+            'Inactive',
+
+            'Blocked'
+
+        ];
+
+        if (!in_array($accountStatus, $allowedStatus, true)) {
+
+            $errors['account_status'] =
+                'Please select a valid account status.';
+        }
+
+        return $errors;
+    }
+}
