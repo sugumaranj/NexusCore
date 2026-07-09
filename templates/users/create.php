@@ -418,7 +418,17 @@ $error = Session::getFlash('error');
                     <input
                         type="file"
                         name="profile_photo"
-                        class="form-control">
+                        class="form-control <?= isset($errors['profile_photo']) ? 'is-invalid' : '' ?>">
+
+                    <?php if (isset($errors['profile_photo'])): ?>
+
+                        <div class="invalid-feedback">
+
+                            <?= htmlspecialchars($errors['profile_photo']) ?>
+
+                        </div>
+
+                    <?php endif; ?>
 
                 </div>
 
@@ -435,7 +445,17 @@ $error = Session::getFlash('error');
                     <input
                         type="file"
                         name="signature_path"
-                        class="form-control">
+                        class="form-control <?= isset($errors['signature_path']) ? 'is-invalid' : '' ?>">
+
+                    <?php if (isset($errors['signature_path'])): ?>
+
+                        <div class="invalid-feedback">
+
+                            <?= htmlspecialchars($errors['signature_path']) ?>
+
+                        </div>
+
+                    <?php endif; ?>
 
                 </div>
 

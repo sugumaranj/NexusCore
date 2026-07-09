@@ -57,72 +57,166 @@ final class UserModel
     }
 
     /**
-     * ---------------------------------------------------------------------
-     * Retrieve all users.
-     *
-     * @return array
-     * ---------------------------------------------------------------------
-     */
-    public function getAll(): array
-    {
-        $sql = "
-            SELECT
-                u.user_id,
-                u.employee_id,
-                u.full_name,
-                u.email,
-                u.phone,
-                u.role,
-                u.account_status,
-                u.profile_photo,
-                u.last_login,
-                d.department_name
-            FROM users u
-            LEFT JOIN departments d
-                ON d.department_id = u.department_id
-            ORDER BY u.full_name ASC
+ * ---------------------------------------------------------------------
+ * Retrieve Users.
+ *
+ * If a search keyword is provided, the results are filtered using:
+ * • Employee ID
+ * • Full Name
+ * • Email Address
+ * • Phone Number
+ * • Role
+ * • Department Name
+ * • Account Status
+ *
+ * Otherwise, all users are returned.
+ *
+ * @param string|null $search
+ * @param string|null $role
+ * @param string|null $status
+ *
+ * @return array
+ * ---------------------------------------------------------------------
+ */
+public function getAll(
+    ?string $search = null,
+    ?string $role = null,
+    ?string $status = null
+): array
+{
+    $sql = "
+        SELECT
+            u.user_id,
+            u.employee_id,
+            u.department_id,
+            u.full_name,
+            u.email,
+            u.phone,
+            u.role,
+            u.profile_photo,
+            u.signature_path,
+            u.account_status,
+            u.last_login,
+            u.created_at,
+            u.updated_at,
+            d.department_name
+        FROM users u
+        LEFT JOIN departments d
+            ON d.department_id = u.department_id
+    ";
+
+    $conditions = [];
+
+    $params = [];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Search Keyword
+    |--------------------------------------------------------------------------
+    */
+
+    if ($search !== null && trim($search) !== '') {
+
+        // Use unique placeholders for every LIKE occurrence to
+        // avoid driver issues with repeated named parameters.
+        $conditions[] = "
+            (
+                u.employee_id LIKE :keyword_employee_id
+                OR u.full_name LIKE :keyword_full_name
+                OR u.email LIKE :keyword_email
+                OR u.phone LIKE :keyword_phone
+                OR u.role LIKE :keyword_role
+                OR d.department_name LIKE :keyword_department
+            )
         ";
 
-        $statement = $this->db->prepare($sql);
+        $kw = '%' . trim($search) . '%';
 
-        $statement->execute();
-
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
+        $params['keyword_employee_id'] = $kw;
+        $params['keyword_full_name']   = $kw;
+        $params['keyword_email']       = $kw;
+        $params['keyword_phone']       = $kw;
+        $params['keyword_role']        = $kw;
+        $params['keyword_department']  = $kw;
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Role Filter
+    |--------------------------------------------------------------------------
+    */
+
+    if ($role !== null && trim($role) !== '') {
+
+        $conditions[] = 'u.role = :role';
+
+        $params['role'] = trim($role);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Account Status Filter
+    |--------------------------------------------------------------------------
+    */
+
+    if ($status !== null && trim($status) !== '') {
+
+        $conditions[] = 'u.account_status = :status';
+
+        $params['status'] = trim($status);
+    }
+
+    if (!empty($conditions)) {
+
+        $sql .= ' WHERE ' . implode(' AND ', $conditions);
+    }
+
+    $sql .= " ORDER BY u.full_name ASC";
+
+    $statement = $this->db->prepare($sql);
+
+    // PDO::execute accepts parameter arrays without leading colons.
+    $statement->execute($params);
+
+    return $statement->fetchAll(PDO::FETCH_ASSOC);
+}
 
     /**
-     * ---------------------------------------------------------------------
-     * Find user by ID.
-     *
-     * @param int $userId
-     *
-     * @return array|false
-     * ---------------------------------------------------------------------
-     */
-    public function findById(int $userId): array|false
-    {
-        $sql = "
-            SELECT
-                u.*,
-                d.department_name
-            FROM users u
-            LEFT JOIN departments d
-                ON d.department_id = u.department_id
-            WHERE u.user_id = :user_id
-        ";
+ * ---------------------------------------------------------------------
+ * Retrieve a User by ID.
+ *
+ * Includes department information.
+ *
+ * @param int $userId
+ *
+ * @return array|false
+ * ---------------------------------------------------------------------
+ */
+public function findById(int $userId): array|false
+{
+    $sql = "
+        SELECT
+            u.*,
+            d.department_name
+        FROM users u
+        LEFT JOIN departments d
+            ON d.department_id = u.department_id
+        WHERE u.user_id = :user_id
+        LIMIT 1
+    ";
 
-        $statement = $this->db->prepare($sql);
+    $statement = $this->db->prepare($sql);
 
-        $statement->bindValue(
-            ':user_id',
-            $userId,
-            PDO::PARAM_INT
-        );
+    $statement->bindValue(
+        ':user_id',
+        $userId,
+        PDO::PARAM_INT
+    );
 
-        $statement->execute();
+    $statement->execute();
 
-        return $statement->fetch(PDO::FETCH_ASSOC);
-    }
+    return $statement->fetch(PDO::FETCH_ASSOC);
+}
 
     /**
      * ---------------------------------------------------------------------
@@ -465,4 +559,60 @@ public function findByEmailExcept(
             ':user_id'       => $userId
         ]);
     }
+
+    /**
+ * ---------------------------------------------------------------------
+ * Check whether a user account is active.
+ *
+ * @param int $userId
+ *
+ * @return bool
+ * ---------------------------------------------------------------------
+ */
+public function isActive(int $userId): bool
+{
+    $sql = "
+        SELECT account_status
+        FROM users
+        WHERE user_id = :user_id
+    ";
+
+    $statement = $this->db->prepare($sql);
+
+    $statement->bindValue(
+        ':user_id',
+        $userId,
+        PDO::PARAM_INT
+    );
+
+    $statement->execute();
+
+    $status = $statement->fetchColumn();
+
+    return $status === 'Active';
+}
+
+/**
+ * ---------------------------------------------------------------------
+ * Update User Last Login.
+ *
+ * @param int $userId
+ *
+ * @return bool
+ * ---------------------------------------------------------------------
+ */
+public function updateLastLogin(int $userId): bool
+{
+    $sql = "
+        UPDATE users
+        SET last_login = NOW()
+        WHERE user_id = :user_id
+    ";
+
+    $statement = $this->db->prepare($sql);
+
+    return $statement->execute([
+        ':user_id' => $userId
+    ]);
+}
 }

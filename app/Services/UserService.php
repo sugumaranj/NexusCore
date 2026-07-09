@@ -63,6 +63,60 @@ final class UserService
 
     /**
      * ---------------------------------------------------------------------
+     * Search and filter users.
+     *
+     * @param string $search
+     * @param string $role
+     * @param string $status
+     *
+     * @return array
+     * ---------------------------------------------------------------------
+     */
+    public function searchUsers(
+        string $search = '',
+        string $role = '',
+        string $status = ''
+    ): array {
+
+        $allowedRoles = [
+
+            'Admin',
+
+            'Principal',
+
+            'HOD',
+
+            'Staff'
+
+        ];
+
+        $allowedStatus = [
+
+            'Active',
+
+            'Inactive',
+
+            'Blocked'
+
+        ];
+
+        $roleFilter = in_array($role, $allowedRoles, true)
+            ? $role
+            : null;
+
+        $statusFilter = in_array($status, $allowedStatus, true)
+            ? $status
+            : null;
+
+        return $this->userModel->getAll(
+            $search !== '' ? $search : null,
+            $roleFilter,
+            $statusFilter
+        );
+    }
+
+    /**
+     * ---------------------------------------------------------------------
      * Retrieve user by ID.
      *
      * @param int $userId
@@ -84,7 +138,7 @@ final class UserService
      * @return array
      * ---------------------------------------------------------------------
      */
-    public function createUser(array $data): array
+    public function createUser(array $data, array $files = []): array
     {
         /*
         |--------------------------------------------------------------------------
@@ -152,6 +206,76 @@ final class UserService
 
         /*
         |--------------------------------------------------------------------------
+        | Upload Profile Photo
+        |--------------------------------------------------------------------------
+        */
+
+        $profileUpload = $this->processFileUpload(
+            $files,
+            'profile_photo',
+            'profile_',
+            'uploads/profile_photos',
+            [
+                'jpg',
+
+                'jpeg',
+
+                'png',
+
+                'webp'
+
+            ]
+        );
+
+        if ($profileUpload['error'] !== null) {
+
+            return [
+
+                'success' => false,
+
+                'message' => $profileUpload['error']
+
+            ];
+        }
+
+        $data['profile_photo'] = $profileUpload['path'];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Upload Signature
+        |--------------------------------------------------------------------------
+        */
+
+        $signatureUpload = $this->processFileUpload(
+            $files,
+            'signature_path',
+            'signature_',
+            'uploads/signatures',
+            [
+                'jpg',
+
+                'jpeg',
+
+                'png'
+
+            ]
+        );
+
+        if ($signatureUpload['error'] !== null) {
+
+            return [
+
+                'success' => false,
+
+                'message' => $signatureUpload['error']
+
+            ];
+        }
+
+        $data['signature_path'] = $signatureUpload['path'];
+
+        /*
+        |--------------------------------------------------------------------------
         | Hash Password
         |--------------------------------------------------------------------------
         */
@@ -206,8 +330,200 @@ final class UserService
      */
     public function updateUser(
         int $userId,
-        array $data
+        array $data,
+        array $files = []
     ): array {
+
+        $existingUser = $this->userModel->findById($userId);
+
+        if (!$existingUser) {
+
+            return [
+
+                'success' => false,
+
+                'message' => 'User not found.'
+
+            ];
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Normalize Input
+        |--------------------------------------------------------------------------
+        */
+
+        $data['full_name'] = trim(
+            $data['full_name'] ?? ''
+        );
+
+        $data['email'] = strtolower(
+            trim($data['email'] ?? '')
+        );
+
+        $data['phone'] = trim(
+            $data['phone'] ?? ''
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Duplicate Email
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            $this->userModel->findByEmailExcept(
+                $data['email'],
+                $userId
+            )
+        ) {
+
+            return [
+
+                'success' => false,
+
+                'message' => 'Email address already exists.'
+
+            ];
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Preserve Existing Uploads
+        |--------------------------------------------------------------------------
+        */
+
+        $data['profile_photo'] = $existingUser['profile_photo'];
+
+        $data['signature_path'] = $existingUser['signature_path'];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Handle Remove Flags
+        |--------------------------------------------------------------------------
+        | When the user checks the "Remove" checkbox we should store NULL
+        | in the database and delete the old file after a successful update.
+        */
+
+        $deleteProfile = null;
+
+        $deleteSignature = null;
+
+        $existingProfileForProcess = $existingUser['profile_photo'];
+
+        $existingSignatureForProcess = $existingUser['signature_path'];
+
+        if (!empty($data['remove_profile_photo'])) {
+
+            $existingProfileForProcess = null;
+
+            $deleteProfile = $existingUser['profile_photo'];
+
+        }
+
+        if (!empty($data['remove_signature'])) {
+
+            $existingSignatureForProcess = null;
+
+            $deleteSignature = $existingUser['signature_path'];
+
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Upload Profile Photo
+        |--------------------------------------------------------------------------
+        */
+
+        $profileUpload = $this->processFileUpload(
+            $files,
+            'profile_photo',
+            'profile_',
+            'uploads/profile_photos',
+            [
+                'jpg',
+
+                'jpeg',
+
+                'png',
+
+                'webp'
+
+            ],
+            $existingProfileForProcess
+        );
+
+        if ($profileUpload['error'] !== null) {
+
+            return [
+
+                'success' => false,
+
+                'message' => $profileUpload['error']
+
+            ];
+        }
+
+        if ($profileUpload['path'] !== $existingUser['profile_photo']) {
+
+            // Defer deletion until after successful DB update.
+            $deleteProfile = $existingUser['profile_photo'];
+        }
+
+        $data['profile_photo'] = $profileUpload['path'];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Upload Signature
+        |--------------------------------------------------------------------------
+        */
+
+        $signatureUpload = $this->processFileUpload(
+            $files,
+            'signature_path',
+            'signature_',
+            'uploads/signatures',
+            [
+                'jpg',
+
+                'jpeg',
+
+                'png'
+
+            ],
+            $existingSignatureForProcess
+        );
+
+        if ($signatureUpload['error'] !== null) {
+
+            return [
+
+                'success' => false,
+
+                'message' => $signatureUpload['error']
+
+            ];
+        }
+
+        if ($signatureUpload['path'] !== $existingUser['signature_path']) {
+
+            // Defer deletion until after successful DB update.
+            $deleteSignature = $existingUser['signature_path'];
+        }
+
+        $data['signature_path'] = $signatureUpload['path'];
+
+        unset(
+            $data['password'],
+            $data['confirm_password'],
+            $data['user_id']
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Save User
+        |--------------------------------------------------------------------------
+        */
 
         $updated = $this->userModel->update(
             $userId,
@@ -225,13 +541,33 @@ final class UserService
             ];
         }
 
-        return [
+            /*
+            |--------------------------------------------------------------------------
+            | Delete Old Uploaded Files
+            |--------------------------------------------------------------------------
+            | Perform deletions only after the database update succeeded to avoid
+            | losing files if the DB update fails.
+            */
 
-            'success' => true,
+            if (!empty($deleteProfile)) {
 
-            'message' => 'User updated successfully.'
+                $this->deleteUploadedFile($deleteProfile);
 
-        ];
+            }
+
+            if (!empty($deleteSignature)) {
+
+                $this->deleteUploadedFile($deleteSignature);
+
+            }
+
+            return [
+
+                'success' => true,
+
+                'message' => 'User updated successfully.'
+
+            ];
     }
 
     /**
@@ -245,6 +581,19 @@ final class UserService
      */
     public function deleteUser(int $userId): array
     {
+        $existingUser = $this->userModel->findById($userId);
+
+        if (!$existingUser) {
+
+            return [
+
+                'success' => false,
+
+                'message' => 'User not found.'
+
+            ];
+        }
+
         $deleted = $this->userModel->delete(
             $userId
         );
@@ -259,6 +608,20 @@ final class UserService
 
             ];
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Delete Uploaded Files
+        |--------------------------------------------------------------------------
+        */
+
+        $this->deleteUploadedFile(
+            $existingUser['profile_photo']
+        );
+
+        $this->deleteUploadedFile(
+            $existingUser['signature_path']
+        );
 
         return [
 
@@ -353,5 +716,192 @@ final class UserService
             'message' => 'Password reset successfully.'
 
         ];
+    }
+
+    /**
+     * ---------------------------------------------------------------------
+     * Process a user file upload.
+     *
+     * @param array       $files
+     * @param string      $fieldName
+     * @param string      $prefix
+     * @param string      $folder
+     * @param array       $allowedExtensions
+     * @param string|null $existingPath
+     *
+     * @return array{path: string|null, error: string|null}
+     * ---------------------------------------------------------------------
+     */
+    private function processFileUpload(
+        array $files,
+        string $fieldName,
+        string $prefix,
+        string $folder,
+        array $allowedExtensions,
+        ?string $existingPath = null
+    ): array {
+
+        if (
+            !isset($files[$fieldName]) ||
+            $files[$fieldName]['error'] === UPLOAD_ERR_NO_FILE
+        ) {
+
+            return [
+
+                'path'  => $existingPath,
+
+                'error' => null
+
+            ];
+        }
+
+        $uploadedPath = $this->uploadImageFile(
+            $files[$fieldName],
+            $prefix,
+            $folder,
+            $allowedExtensions
+        );
+
+        if ($uploadedPath === null) {
+
+            return [
+
+                'path'  => $existingPath,
+
+                'error' => ucfirst(
+                    str_replace('_', ' ', $fieldName)
+                ) . ' must be a valid image file.'
+
+            ];
+        }
+
+        return [
+
+            'path'  => $uploadedPath,
+
+            'error' => null
+
+        ];
+    }
+
+    /**
+     * ---------------------------------------------------------------------
+     * Validate and upload an image file.
+     *
+     * @param array  $file
+     * @param string $prefix
+     * @param string $folder
+     * @param array  $allowedExtensions
+     *
+     * @return string|null
+     * ---------------------------------------------------------------------
+     */
+    private function uploadImageFile(
+        array $file,
+        string $prefix,
+        string $folder,
+        array $allowedExtensions
+    ): ?string {
+
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+
+            return null;
+        }
+
+        $extension = strtolower(
+            pathinfo(
+                $file['name'],
+                PATHINFO_EXTENSION
+            )
+        );
+
+        if (!in_array($extension, $allowedExtensions, true)) {
+
+            return null;
+        }
+
+        if (@getimagesize($file['tmp_name']) === false) {
+
+            return null;
+        }
+
+        $fileName =
+            uniqid($prefix, true) .
+            '.' .
+            $extension;
+
+        $uploadDir =
+            dirname(__DIR__, 2)
+            . '/public/'
+            . $folder
+            . '/';
+
+        if (!is_dir($uploadDir)) {
+
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $destination = $uploadDir . $fileName;
+
+        if (
+            move_uploaded_file(
+                $file['tmp_name'],
+                $destination
+            )
+        ) {
+
+            return $folder . '/' . $fileName;
+        }
+
+        return null;
+    }
+
+    /**
+     * ---------------------------------------------------------------------
+     * Delete an uploaded file from public storage.
+     *
+     * @param string|null $relativePath
+     *
+     * @return void
+     * ---------------------------------------------------------------------
+     */
+    private function deleteUploadedFile(
+        ?string $relativePath
+    ): void {
+
+        if ($relativePath === null || $relativePath === '') {
+
+            return;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Skip Default Placeholder Images
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !str_starts_with(
+                $relativePath,
+                'uploads/profile_photos/'
+            )
+            && !str_starts_with(
+                $relativePath,
+                'uploads/signatures/'
+            )
+        ) {
+
+            return;
+        }
+
+        $fullPath =
+            dirname(__DIR__, 2)
+            . '/public/'
+            . $relativePath;
+
+        if (is_file($fullPath)) {
+
+            unlink($fullPath);
+        }
     }
 }

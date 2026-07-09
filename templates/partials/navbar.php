@@ -34,18 +34,16 @@ use App\Core\Session;
 |
 */
 
-$user = Session::get('user', []);
+    $loggedInUser = Session::get('user', []);
 
 /*
 |--------------------------------------------------------------------------
 | User Information
 |--------------------------------------------------------------------------
 */
+    $fullName = $loggedInUser['full_name'] ?? 'Administrator';
 
-$fullName = $user['full_name'] ?? 'Administrator';
-
-$role = $user['role'] ?? 'Administrator';
-
+    $role = $loggedInUser['role'] ?? 'Administrator';
 ?>
 
 <!-- =============================================================== -->

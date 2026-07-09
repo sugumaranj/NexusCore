@@ -89,13 +89,30 @@ final class UserController extends BaseController
      */
     public function index(): void
     {
-        $users = $this->userService->getAllUsers();
+        $search = trim($_GET['search'] ?? '');
+
+        $role = trim($_GET['role'] ?? '');
+
+        $status = trim($_GET['status'] ?? '');
+
+        $users = $this->userService->searchUsers(
+            $search,
+            $role,
+            $status
+        );
 
         $this->render(
             'users.index',
             [
                 'pageTitle' => 'User Management',
-                'users'     => $users
+
+                'users'     => $users,
+
+                'search'    => $search,
+
+                'role'      => $role,
+
+                'status'    => $status
             ]
         );
     }
@@ -126,7 +143,10 @@ final class UserController extends BaseController
      */
     public function store(): void
     {
-        $errors = $this->validator->validate($_POST);
+        $errors = array_merge(
+            $this->validator->validate($_POST),
+            $this->validator->validateFiles($_FILES)
+        );
 
         if (!empty($errors)) {
 
@@ -137,6 +157,8 @@ final class UserController extends BaseController
 
                     'old'         => $_POST,
 
+                    'errors'      => $errors,
+
                     'departments' => $this
                         ->departmentService
                         ->getAllDepartments()
@@ -146,7 +168,10 @@ final class UserController extends BaseController
             return;
         }
 
-        $result = $this->userService->createUser($_POST);
+        $result = $this->userService->createUser(
+            $_POST,
+            $_FILES
+        );
 
         if (!$result['success']) {
 
@@ -155,8 +180,15 @@ final class UserController extends BaseController
             $this->render(
                 'users.create',
                 [
-                    'pageTitle' => 'Create User',
-                    'old'       => $_POST
+                    'pageTitle'   => 'Create User',
+
+                    'old'         => $_POST,
+
+                    'errors'      => [],
+
+                    'departments' => $this
+                        ->departmentService
+                        ->getAllDepartments()
                 ]
             );
 
@@ -209,7 +241,31 @@ final class UserController extends BaseController
     {
         $userId = (int) ($_POST['user_id'] ?? 0);
 
-        $errors = $this->validator->validate($_POST);
+        $originalUser = $this->userService->getUserById($userId);
+
+        if (!$originalUser) {
+
+            $this->error('User not found.');
+
+            $this->redirect('/users');
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Merge Database Values With Submitted POST
+        |--------------------------------------------------------------------------
+        |
+        | Readonly fields such as employee_id and timestamps are not present
+        | in $_POST. Merge preserves them while keeping submitted input.
+        |
+        */
+
+        $mergedUser = array_merge($originalUser, $_POST);
+
+        $errors = array_merge(
+            $this->validator->validate($mergedUser),
+            $this->validator->validateFiles($_FILES)
+        );
 
         if (!empty($errors)) {
 
@@ -220,7 +276,7 @@ final class UserController extends BaseController
 
                     'errors'      => $errors,
 
-                    'user'        => $_POST,
+                    'user'        => $mergedUser,
 
                     'departments' => $this
                         ->departmentService
@@ -233,7 +289,8 @@ final class UserController extends BaseController
 
         $result = $this->userService->updateUser(
             $userId,
-            $_POST
+            $_POST,
+            $_FILES
         );
 
         if (!$result['success']) {

@@ -52,6 +52,46 @@ $error = Session::getFlash('error');
 
 $user = $user ?? [];
 
+/*
+|--------------------------------------------------------------------------
+| Safe Defaults
+|--------------------------------------------------------------------------
+|
+| Ensure every expected user key exists to prevent undefined index
+| warnings and htmlspecialchars() null errors.
+|
+*/
+
+$user = array_merge([
+
+    'user_id'        => 0,
+
+    'employee_id'    => '',
+
+    'full_name'      => '',
+
+    'email'          => '',
+
+    'phone'          => '',
+
+    'department_id'  => '',
+
+    'role'           => '',
+
+    'profile_photo'  => '',
+
+    'signature_path' => '',
+
+    'account_status' => 'Active',
+
+    'created_at'     => '',
+
+    'updated_at'     => '',
+
+    'last_login'     => '',
+
+], $user);
+
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -123,7 +163,7 @@ $user = $user ?? [];
                     <input
                         type="text"
                         class="form-control"
-                        value="<?= htmlspecialchars($user['employee_id']) ?>"
+                        value="<?= htmlspecialchars((string) $user['employee_id']) ?>"
                         readonly>
 
                 </div>
@@ -142,7 +182,7 @@ $user = $user ?? [];
                         type="text"
                         name="full_name"
                         class="form-control <?= isset($errors['full_name']) ? 'is-invalid' : '' ?>"
-                        value="<?= htmlspecialchars($user['full_name']) ?>">
+                        value="<?= htmlspecialchars((string) $user['full_name']) ?>">
 
                     <?php if (isset($errors['full_name'])): ?>
 
@@ -170,7 +210,7 @@ $user = $user ?? [];
                         type="email"
                         name="email"
                         class="form-control <?= isset($errors['email']) ? 'is-invalid' : '' ?>"
-                        value="<?= htmlspecialchars($user['email']) ?>">
+                        value="<?= htmlspecialchars((string) $user['email']) ?>">
 
                     <?php if (isset($errors['email'])): ?>
 
@@ -198,7 +238,7 @@ $user = $user ?? [];
                         type="text"
                         name="phone"
                         class="form-control <?= isset($errors['phone']) ? 'is-invalid' : '' ?>"
-                        value="<?= htmlspecialchars($user['phone'] ?? '') ?>">
+                        value="<?= htmlspecialchars((string) $user['phone']) ?>">
 
                     <?php if (isset($errors['phone'])): ?>
 
@@ -262,7 +302,7 @@ $user = $user ?? [];
 
                             <option
                                 value="<?= $role ?>"
-                                <?= ($user['role'] === $role) ? 'selected' : '' ?>>
+                                <?= ((string) $user['role'] === $role) ? 'selected' : '' ?>>
 
                                 <?= $role ?>
 
@@ -291,6 +331,34 @@ $user = $user ?? [];
 
                 </div>
 
+                    <!--
+                    |--------------------------------------------------------------------------
+                    | Remove Profile Photo
+                    |--------------------------------------------------------------------------
+                    -->
+
+                    <div class="col-md-6 d-flex align-items-center">
+
+                        <div class="form-check">
+
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                name="remove_profile_photo"
+                                id="remove_profile_photo"
+                                value="1"
+                                <?= !empty($user['remove_profile_photo']) ? 'checked' : '' ?> />
+
+                            <label class="form-check-label" for="remove_profile_photo">
+
+                                Remove Profile Photo
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
                 <!-- Signature -->
 
                 <div class="col-md-6">
@@ -307,6 +375,34 @@ $user = $user ?? [];
                         class="form-control">
 
                 </div>
+
+                    <!--
+                    |--------------------------------------------------------------------------
+                    | Remove Signature
+                    |--------------------------------------------------------------------------
+                    -->
+
+                    <div class="col-md-6 d-flex align-items-center">
+
+                        <div class="form-check">
+
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                name="remove_signature"
+                                id="remove_signature"
+                                value="1"
+                                <?= !empty($user['remove_signature']) ? 'checked' : '' ?> />
+
+                            <label class="form-check-label" for="remove_signature">
+
+                                Remove Signature
+
+                            </label>
+
+                        </div>
+
+                    </div>
 
                 <!-- Account Status -->
 
@@ -326,7 +422,7 @@ $user = $user ?? [];
 
                             <option
                                 value="<?= $status ?>"
-                                <?= ($user['account_status'] === $status) ? 'selected' : '' ?>>
+                                <?= ((string) $user['account_status'] === $status) ? 'selected' : '' ?>>
 
                                 <?= $status ?>
 

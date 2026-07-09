@@ -37,6 +37,18 @@ $error = Session::getFlash('error');
 
 /*
 |--------------------------------------------------------------------------
+| Search Filters
+|--------------------------------------------------------------------------
+*/
+
+$search = $search ?? '';
+
+$role = $role ?? '';
+
+$status = $status ?? '';
+
+/*
+|--------------------------------------------------------------------------
 | User Statistics
 |--------------------------------------------------------------------------
 */
@@ -244,30 +256,45 @@ $blockedUsers = count(
 
     <div class="card-body">
 
-        <div class="row g-3">
+        <form
+            action="<?= base_url() ?>/users"
+            method="get"
+            class="row g-3">
 
             <div class="col-md-4">
 
                 <input
                     type="text"
+                    name="search"
                     class="form-control"
-                    placeholder="Search user...">
+                    placeholder="Search user..."
+                    value="<?= htmlspecialchars($search) ?>">
 
             </div>
 
             <div class="col-md-3">
 
-                <select class="form-select">
+                <select
+                    name="role"
+                    class="form-select">
 
-                    <option>All Roles</option>
+                    <option value="">
 
-                    <option>Admin</option>
+                        All Roles
 
-                    <option>Principal</option>
+                    </option>
 
-                    <option>HOD</option>
+                    <?php foreach (['Admin', 'Principal', 'HOD', 'Staff'] as $roleOption): ?>
 
-                    <option>Staff</option>
+                        <option
+                            value="<?= $roleOption ?>"
+                            <?= ($role === $roleOption) ? 'selected' : '' ?>>
+
+                            <?= $roleOption ?>
+
+                        </option>
+
+                    <?php endforeach; ?>
 
                 </select>
 
@@ -275,15 +302,27 @@ $blockedUsers = count(
 
             <div class="col-md-3">
 
-                <select class="form-select">
+                <select
+                    name="status"
+                    class="form-select">
 
-                    <option>All Status</option>
+                    <option value="">
 
-                    <option>Active</option>
+                        All Status
 
-                    <option>Inactive</option>
+                    </option>
 
-                    <option>Blocked</option>
+                    <?php foreach (['Active', 'Inactive', 'Blocked'] as $statusOption): ?>
+
+                        <option
+                            value="<?= $statusOption ?>"
+                            <?= ($status === $statusOption) ? 'selected' : '' ?>>
+
+                            <?= $statusOption ?>
+
+                        </option>
+
+                    <?php endforeach; ?>
 
                 </select>
 
@@ -291,7 +330,9 @@ $blockedUsers = count(
 
             <div class="col-md-2">
 
-                <button class="btn btn-outline-primary w-100">
+                <button
+                    type="submit"
+                    class="btn btn-outline-primary w-100">
 
                     Search
 
@@ -299,7 +340,7 @@ $blockedUsers = count(
 
             </div>
 
-        </div>
+        </form>
 
     </div>
 

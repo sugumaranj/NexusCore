@@ -38,9 +38,9 @@ use App\Core\Session;
 |--------------------------------------------------------------------------
 */
 
-$user = Session::get('user', []);
+$loggedInUser = Session::get('user', []);
 
-$currentRole = $user['role'] ?? 'Admin';
+$currentRole = $loggedInUser['role'] ?? 'Admin';
 
 /*
 |--------------------------------------------------------------------------
@@ -172,7 +172,7 @@ $menuItems = [
         <h6 class="mb-1">
 
             <?= htmlspecialchars(
-                $user['full_name'] ?? 'Administrator',
+                $loggedInUser['full_name'] ?? 'Administrator',
                 ENT_QUOTES,
                 'UTF-8'
             ) ?>

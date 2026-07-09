@@ -10,6 +10,14 @@ declare(strict_types=1);
  * Location    : app/Services/
  * Description : Handles user authentication.
  *
+ * Responsibilities
+ * -------------------------------------------------------------------------
+ * • Authenticate users
+ * • Verify account status
+ * • Verify password
+ * • Create authenticated session
+ * • Update last login timestamp
+ *
  * Author      : Sugumaran J
  * Project     : NexusCore
  * -------------------------------------------------------------------------
@@ -39,7 +47,7 @@ final class AuthService
 
     /**
      * ---------------------------------------------------------------------
-     * Authenticate a user.
+     * Authenticate User.
      *
      * @param string $email
      * @param string $password
@@ -49,37 +57,81 @@ final class AuthService
      */
     public function login(string $email, string $password): bool
     {
+        /*
+        |--------------------------------------------------------------------------
+        | Retrieve User
+        |--------------------------------------------------------------------------
+        */
+
         $user = $this->userModel->findByEmail($email);
 
-        // User not found
-        if ($user === null) {
+        if ($user === false) {
             return false;
         }
 
-        // Account inactive
-        if (!$this->userModel->isActive($user)) {
+        /*
+        |--------------------------------------------------------------------------
+        | Verify Account Status
+        |--------------------------------------------------------------------------
+        */
+
+        if (($user['account_status'] ?? '') !== 'Active') {
             return false;
         }
 
-        // Password verification
-        if (!password_verify($password, $user['password_hash'])) {
+        /*
+        |--------------------------------------------------------------------------
+        | Verify Password
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !password_verify(
+                $password,
+                $user['password_hash']
+            )
+        ) {
             return false;
         }
 
-        // Regenerate session ID
+        /*
+        |--------------------------------------------------------------------------
+        | Prevent Session Fixation
+        |--------------------------------------------------------------------------
+        */
+
         Session::regenerate();
 
-        // Store user information
+        /*
+        |--------------------------------------------------------------------------
+        | Store Authenticated User
+        |--------------------------------------------------------------------------
+        */
+
         Session::set('user', [
-            'user_id'       => $user['user_id'],
-            'employee_id'   => $user['employee_id'],
-            'department_id' => $user['department_id'],
-            'full_name'     => $user['full_name'],
-            'email'         => $user['email'],
-            'role'          => $user['role']
+
+            'user_id'        => (int) $user['user_id'],
+
+            'employee_id'    => $user['employee_id'],
+
+            'department_id'  => $user['department_id'],
+
+            'full_name'      => $user['full_name'],
+
+            'email'          => $user['email'],
+
+            'role'           => $user['role'],
+
+            'account_status' => $user['account_status']
+
         ]);
 
-        // Update last login
+        /*
+        |--------------------------------------------------------------------------
+        | Update Last Login
+        |--------------------------------------------------------------------------
+        */
+
         $this->userModel->updateLastLogin(
             (int) $user['user_id']
         );
@@ -89,9 +141,7 @@ final class AuthService
 
     /**
      * ---------------------------------------------------------------------
-     * Log out the current user.
-     *
-     * @return void
+     * Logout User.
      * ---------------------------------------------------------------------
      */
     public function logout(): void
@@ -101,9 +151,7 @@ final class AuthService
 
     /**
      * ---------------------------------------------------------------------
-     * Check whether a user is authenticated.
-     *
-     * @return bool
+     * Check Authentication.
      * ---------------------------------------------------------------------
      */
     public function check(): bool
@@ -113,9 +161,7 @@ final class AuthService
 
     /**
      * ---------------------------------------------------------------------
-     * Get the currently authenticated user.
-     *
-     * @return array|null
+     * Retrieve Current User.
      * ---------------------------------------------------------------------
      */
     public function user(): ?array

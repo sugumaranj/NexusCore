@@ -251,4 +251,150 @@ final class UserValidator
 
         return $errors;
     }
+
+    /**
+     * ---------------------------------------------------------------------
+     * Validate uploaded files.
+     *
+     * @param array $files
+     *
+     * @return array<string, string>
+     * ---------------------------------------------------------------------
+     */
+    public function validateFiles(array $files): array
+    {
+        $errors = [];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Maximum Upload Size (2 MB)
+        |--------------------------------------------------------------------------
+        */
+
+        $maxFileSize = 2 * 1024 * 1024;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Profile Photo
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            isset($files['profile_photo']) &&
+            $files['profile_photo']['error'] !== UPLOAD_ERR_NO_FILE
+        ) {
+
+            $profileError = $this->validateUploadedFile(
+                $files['profile_photo'],
+                [
+                    'jpg',
+
+                    'jpeg',
+
+                    'png',
+
+                    'webp'
+
+                ],
+                $maxFileSize,
+                'Profile photo'
+            );
+
+            if ($profileError !== null) {
+
+                $errors['profile_photo'] = $profileError;
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Signature
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            isset($files['signature_path']) &&
+            $files['signature_path']['error'] !== UPLOAD_ERR_NO_FILE
+        ) {
+
+            $signatureError = $this->validateUploadedFile(
+                $files['signature_path'],
+                [
+                    'jpg',
+
+                    'jpeg',
+
+                    'png'
+
+                ],
+                $maxFileSize,
+                'Signature'
+            );
+
+            if ($signatureError !== null) {
+
+                $errors['signature_path'] = $signatureError;
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * ---------------------------------------------------------------------
+     * Validate a single uploaded file.
+     *
+     * @param array  $file
+     * @param array  $allowedExtensions
+     * @param int    $maxFileSize
+     * @param string $label
+     *
+     * @return string|null
+     * ---------------------------------------------------------------------
+     */
+    private function validateUploadedFile(
+        array $file,
+        array $allowedExtensions,
+        int $maxFileSize,
+        string $label
+    ): ?string {
+
+        if ($file['error'] === UPLOAD_ERR_INI_SIZE
+            || $file['error'] === UPLOAD_ERR_FORM_SIZE
+        ) {
+
+            return $label . ' exceeds the maximum allowed file size of 2 MB.';
+        }
+
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+
+            return $label . ' upload failed. Please try again.';
+        }
+
+        $extension = strtolower(
+            pathinfo(
+                $file['name'],
+                PATHINFO_EXTENSION
+            )
+        );
+
+        if (!in_array($extension, $allowedExtensions, true)) {
+
+            return $label . ' must be a '
+                . implode(', ', $allowedExtensions)
+                . ' file.';
+        }
+
+        if ($file['size'] > $maxFileSize) {
+
+            return $label . ' exceeds the maximum allowed file size of 2 MB.';
+        }
+
+        if (@getimagesize($file['tmp_name']) === false) {
+
+            return $label . ' must be a valid image file.';
+        }
+
+        return null;
+    }
 }
