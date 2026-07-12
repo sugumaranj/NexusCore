@@ -60,6 +60,7 @@ if (!function_exists('asset')) {
      */
     function asset(string $path): string
     {
-        return base_url() . '/' . ltrim($path, '/');
+        $assetBase = rtrim(config('asset_url') ?? config('base_url'), '/');
+        return $assetBase . '/' . ltrim($path, '/');
     }
 }

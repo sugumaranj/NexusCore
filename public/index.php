@@ -26,6 +26,8 @@ use App\Controllers\DashboardController;
 use App\Controllers\DepartmentController;
 use App\Controllers\HomeController;
 use App\Controllers\ModuleController;
+use App\Controllers\StudentController;
+use App\Controllers\SymposiumController;
 use App\Controllers\UserController;
 
 use App\Core\Application;
@@ -240,13 +242,91 @@ $router->post(
 // Student Management
 $router->get(
     '/students',
-    [ModuleController::class, 'students']
+    [StudentController::class, 'index']
+);
+
+// Display Create Student Form
+$router->get(
+    '/students/create',
+    [StudentController::class, 'create']
+);
+
+// Store Student
+$router->post(
+    '/students/store',
+    [StudentController::class, 'store']
+);
+
+// Display Edit Student Form
+$router->get(
+    '/students/edit',
+    [StudentController::class, 'edit']
+);
+
+// Update Student
+$router->post(
+    '/students/update',
+    [StudentController::class, 'update']
+);
+
+// View Student Details
+$router->get(
+    '/students/view',
+    [StudentController::class, 'view']
+);
+
+// Delete Student
+$router->post(
+    '/students/delete',
+    [StudentController::class, 'delete']
 );
 
 // Symposium Management
 $router->get(
     '/symposiums',
-    [ModuleController::class, 'symposiums']
+    [SymposiumController::class, 'index']
+);
+
+// Display Create Symposium Form
+$router->get(
+    '/symposiums/create',
+    [SymposiumController::class, 'create']
+);
+
+// Store Symposium
+$router->post(
+    '/symposiums/store',
+    [SymposiumController::class, 'store']
+);
+
+// Display Edit Symposium Form
+$router->get(
+    '/symposiums/edit',
+    [SymposiumController::class, 'edit']
+);
+
+// Update Symposium
+$router->post(
+    '/symposiums/update',
+    [SymposiumController::class, 'update']
+);
+
+// View Symposium Details
+$router->get(
+    '/symposiums/view',
+    [SymposiumController::class, 'view']
+);
+
+// Delete Symposium
+$router->post(
+    '/symposiums/delete',
+    [SymposiumController::class, 'delete']
+);
+
+// Change Symposium Status
+$router->post(
+    '/symposiums/change-status',
+    [SymposiumController::class, 'changeStatus']
 );
 
 // Competition Management

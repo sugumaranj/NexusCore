@@ -12,7 +12,9 @@
       "App\\": "app/"
     },
     "files": [
-      "app/Helpers/url_helper.php"
+      "app/Helpers/url_helper.php",
+      "app/Helpers/student_helper.php",
+      "app/Helpers/symposium_helper.php"
     ]
   }
 }

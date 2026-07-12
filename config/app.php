@@ -37,7 +37,9 @@ return [
     |
     */
 
-    'base_url' => '/NexusCore/public',
+    'base_url' => '/NexusCore',
+
+    'asset_url' => '/NexusCore/public',
 
     /*
     |--------------------------------------------------------------------------
